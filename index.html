@@ -1,77 +1,194 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>hiburansejenak.</title>
+    <title>Godbless Neon Snake</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
-            background-color: #111;
+            background-color: #0d0d13;
             color: white;
             font-family: 'Poppins', sans-serif;
-            text-align: center;
-            overflow: hidden; /* Biar gak bisa di-scroll */
-            height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
         }
 
-        /* Kotak target yang harus diklik */
-        #target {
-            width: 80px;
-            height: 80px;
-            background-color: #ff0055;
-            border-radius: 10px;
-            position: absolute;
-            cursor: pointer;
-            transition: all 0.1s ease;
-            box-shadow: 0 0 15px #ff0055;
+        h1 {
+            margin: 5px 0;
+            font-size: 24px;
+            color: #00ffcc;
+            text-shadow: 0 0 10px #00ffcc;
         }
+
+        /* Area Game (Canvas) */
+        canvas {
+            background-color: #14141f;
+            border: 4px solid #00ffcc;
+            box-shadow: 0 0 20px #00ffcc;
+            display: block;
+        }
+
+        /* Tombol Kontrol khusus HP (Biar bisa dimainin lewat layar sentuh) */
+        .controls {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 50px);
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #222;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 0 5px #00ffcc;
+        }
+
+        .btn:active {
+            background: #00ffcc;
+            color: #111;
+        }
+
+        /* Tombol kosong buat layout grid */
+        .empty { visibility: hidden; }
     </style>
 </head>
 <body>
 
-    <h1>SKOR: <span id="skor">0</span></h1>
-    <p>Ketuk kotak merah secepat mungkin!</p>
+    <h1>SKOR: <span id="scoreText">0</span></h1>
+    
+    <!-- Tempat Game Digambar -->
+    <canvas id="gameCanvas" width="300" height="300"></canvas>
 
-    <!-- Ini kotak targetnya der -->
-    <div id="target"></div>
+    <!-- Tombol Kontrol Layar HP -->
+    <div class="controls">
+        <div class="empty"></div>
+        <div class="btn" onclick="changeDirection('UP')">▲</div>
+        <div class="empty"></div>
+        <div class="btn" onclick="changeDirection('LEFT')">◀</div>
+        <div class="btn" onclick="changeDirection('DOWN')">▼</div>
+        <div class="btn" onclick="changeDirection('RIGHT')">▶</div>
+    </div>
 
     <script>
-        // Ambil elemen HTML-nya dulu
-        const target = document.getElementById('target');
-        const skorTeks = document.getElementById('skor');
-        
-        let skor = 0;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreText = document.getElementById("scoreText");
 
-        // Fungsi buat mindahin kotak secara acak di layar HP/PC
-        function pindahKotak() {
-            // Hitung batas lebar dan tinggi layar biar kotak gak keluar layar
-            const batasLebar = window.innerWidth - 80;
-            const batasTinggi = window.innerHeight - 150;
+        const grid = 15; // Ukuran satu kotak uler & makanan
+        let snake = [{x: 150, y: 150}]; // Ular mulai di tengah
+        let food = {x: 0, y: 0};
+        let dx = grid; // Arah jalan awal ke kanan
+        let dy = 0;
+        let score = 0;
+        let gameInterval;
 
-            // Acak koordinat X dan Y
-            const xAcak = Math.floor(Math.random() * batasLebar);
-            const yAcak = Math.floor(Math.random() * batasTinggi) + 100; // +100 biar gak numpuk sama tulisan skor
-
-            // Pasang posisi baru ke kotak merah
-            target.style.left = xAcak + 'px';
-            target.style.top = yAcak + 'px';
+        // Fungsi taruh makanan acak
+        function randomFood() {
+            food.x = Math.floor(Math.random() * (canvas.width / grid)) * grid;
+            food.y = Math.floor(Math.random() * (canvas.height / grid)) * grid;
         }
 
-        // Kejadian ketika kotak merah diklik
-        target.addEventListener('click', function() {
-            skor++; // Tambah skor 1
-            skorTeks.innerText = skor; // Ubah angka skor di layar
-            pindahKotak(); // Pindahin kotaknya ke tempat baru
+        // Logic menggambar game setiap detiknya (Game Loop)
+        function main() {
+            if (isGameOver()) {
+                alert("GAME OVER! Skor akhir lu: " + score);
+                resetGame();
+                return;
+            }
+
+            // Bersihin canvas tiap frame biar gak berbayang
+            ctx.fillStyle = "#14141f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gambar Makanan (Warna Merah Neon)
+            ctx.fillStyle = "#ff0055";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#ff0055";
+            ctx.fillRect(food.x, food.y, grid, grid);
+
+            // Jalankan Ular
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+            snake.unshift(head);
+
+            // Cek apakah ular makan makanan
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreText.innerText = score;
+                randomFood();
+            } else {
+                snake.pop(); // Potong ekornya biar panjangnya tetep kalau gak makan
+            }
+
+            // Gambar Ular (Warna Hijau Neon)
+            ctx.fillStyle = "#00ffcc";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#00ffcc";
+            snake.forEach(part => {
+                ctx.fillRect(part.x, part.y, grid, grid);
+            });
+            ctx.shadowBlur = 0; // reset shadow biar gak bocor
+        }
+
+        // Deteksi Game Over (Nabrak tembok atau badan sendiri)
+        function isGameOver() {
+            const head = snake[0];
+            const hitLeftWall = head.x < 0;
+            const hitRightWall = head.x >= canvas.width;
+            const hitToptWall = head.y < 0;
+            const hitBottomWall = head.y >= canvas.height;
+
+            for (let i = 4; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) return true;
+            }
+
+            return hitLeftWall || hitRightWall || hitToptWall || hitBottomWall;
+        }
+
+        // Kontrol Arah Jalan
+        function changeDirection(dir) {
+            if (dir === 'LEFT' && dx === 0) { dx = -grid; dy = 0; }
+            if (dir === 'UP' && dy === 0) { dx = 0; dy = -grid; }
+            if (dir === 'RIGHT' && dx === 0) { dx = grid; dy = 0; }
+            if (dir === 'DOWN' && dy === 0) { dx = 0; dy = grid; }
+        }
+
+        // Deteksi Keyboard kalau lu main di Laptop
+        document.addEventListener("keydown", event => {
+            const keyPressed = event.keyCode;
+            if (keyPressed === 37 && dx === 0) { dx = -grid; dy = 0; } // Kiri
+            if (keyPressed === 38 && dy === 0) { dx = 0; dy = -grid; } // Atas
+            if (keyPressed === 39 && dx === 0) { dx = grid; dy = 0; }  // Kanan
+            if (keyPressed === 40 && dy === 0) { dx = 0; dy = grid; }  // Bawah
         });
 
-        // Jalankan fungsi pindah pertama kali pas game dibuka
-        pindahKotak();
-    </script>
+        // Reset Game
+        function resetGame() {
+            snake = [{x: 150, y: 150}];
+            dx = grid;
+            dy = 0;
+            score = 0;
+            scoreText.innerText = score;
+            randomFood();
+        }
 
+        // Mulai Game
+        randomFood();
+        gameInterval = setInterval(main, 100); // Jalanin game tiap 100 milidetik (0.1 detik)
+    </script>
 </body>
 </html>
