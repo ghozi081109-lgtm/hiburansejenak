@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hiburansejenak.</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            overflow: hidden; /* Biar gak bisa di-scroll */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Kotak target yang harus diklik */
+        #target {
+            width: 80px;
+            height: 80px;
+            background-color: #ff0055;
+            border-radius: 10px;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 15px #ff0055;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>SKOR: <span id="skor">0</span></h1>
+    <p>Ketuk kotak merah secepat mungkin!</p>
+
+    <!-- Ini kotak targetnya der -->
+    <div id="target"></div>
+
+    <script>
+        // Ambil elemen HTML-nya dulu
+        const target = document.getElementById('target');
+        const skorTeks = document.getElementById('skor');
+        
+        let skor = 0;
+
+        // Fungsi buat mindahin kotak secara acak di layar HP/PC
+        function pindahKotak() {
+            // Hitung batas lebar dan tinggi layar biar kotak gak keluar layar
+            const batasLebar = window.innerWidth - 80;
+            const batasTinggi = window.innerHeight - 150;
+
+            // Acak koordinat X dan Y
+            const xAcak = Math.floor(Math.random() * batasLebar);
+            const yAcak = Math.floor(Math.random() * batasTinggi) + 100; // +100 biar gak numpuk sama tulisan skor
+
+            // Pasang posisi baru ke kotak merah
+            target.style.left = xAcak + 'px';
+            target.style.top = yAcak + 'px';
+        }
+
+        // Kejadian ketika kotak merah diklik
+        target.addEventListener('click', function() {
+            skor++; // Tambah skor 1
+            skorTeks.innerText = skor; // Ubah angka skor di layar
+            pindahKotak(); // Pindahin kotaknya ke tempat baru
+        });
+
+        // Jalankan fungsi pindah pertama kali pas game dibuka
+        pindahKotak();
+    </script>
+
+</body>
+</html>
